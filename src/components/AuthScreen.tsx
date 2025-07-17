@@ -3,7 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Phone, Mail, ArrowLeft } from "lucide-react";
+import { Phone, Mail, ArrowLeft, Loader2 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 interface AuthScreenProps {
   onBack: () => void;
@@ -12,6 +14,8 @@ interface AuthScreenProps {
 
 export const AuthScreen = ({ onBack, onAuth }: AuthScreenProps) => {
   const [authType, setAuthType] = useState<'phone' | 'email'>('email');
+  const [isLogin, setIsLogin] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     phone: '',
@@ -20,9 +24,108 @@ export const AuthScreen = ({ onBack, onAuth }: AuthScreenProps) => {
     name: ''
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const { login, register } = useAuth();
+  const { toast } = useToast();
+
+  const validateForm = () => {
+    if (!isLogin && !formData.name.trim()) {
+      toast({
+        title: "Erro",
+        description: "Nome é obrigatório",
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    if (!formData.email.trim()) {
+      toast({
+        title: "Erro",
+        description: "Email é obrigatório",
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    if (!formData.password.trim()) {
+      toast({
+        title: "Erro",
+        description: "Senha é obrigatória",
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    if (!isLogin && formData.password !== formData.confirmPassword) {
+      toast({
+        title: "Erro",
+        description: "Senhas não coincidem",
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    if (formData.password.length < 6) {
+      toast({
+        title: "Erro",
+        description: "Senha deve ter pelo menos 6 caracteres",
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onAuth();
+    
+    if (!validateForm()) return;
+
+    setIsLoading(true);
+
+    try {
+      let success = false;
+
+      if (isLogin) {
+        success = await login(formData.email, formData.password);
+        if (success) {
+          toast({
+            title: "Sucesso!",
+            description: "Login realizado com sucesso"
+          });
+          onAuth();
+        } else {
+          toast({
+            title: "Erro",
+            description: "Email ou senha incorretos",
+            variant: "destructive"
+          });
+        }
+      } else {
+        success = await register(formData.name, formData.email, formData.password, formData.phone);
+        if (success) {
+          toast({
+            title: "Sucesso!",
+            description: "Conta criada com sucesso"
+          });
+          onAuth();
+        } else {
+          toast({
+            title: "Erro",
+            description: "Este email já está em uso",
+            variant: "destructive"
+          });
+        }
+      }
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Algo deu errado. Tente novamente.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -49,7 +152,7 @@ export const AuthScreen = ({ onBack, onAuth }: AuthScreenProps) => {
           </CardHeader>
 
           <CardContent>
-            <Tabs defaultValue="login" className="w-full">
+            <Tabs defaultValue="login" value={isLogin ? "login" : "register"} onValueChange={(value) => setIsLogin(value === "login")} className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-6">
                 <TabsTrigger value="login">Entrar</TabsTrigger>
                 <TabsTrigger value="register">Criar Conta</TabsTrigger>
@@ -107,8 +210,15 @@ export const AuthScreen = ({ onBack, onAuth }: AuthScreenProps) => {
                     required
                   />
 
-                  <Button type="submit" variant="romantic" className="w-full">
-                    Entrar
+                  <Button type="submit" variant="romantic" className="w-full" disabled={isLoading}>
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Entrando...
+                      </>
+                    ) : (
+                      "Entrar"
+                    )}
                   </Button>
                 </form>
 
@@ -153,8 +263,15 @@ export const AuthScreen = ({ onBack, onAuth }: AuthScreenProps) => {
                     required
                   />
 
-                  <Button type="submit" variant="romantic" className="w-full">
-                    Criar Conta
+                  <Button type="submit" variant="romantic" className="w-full" disabled={isLoading}>
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Criando conta...
+                      </>
+                    ) : (
+                      "Criar Conta"
+                    )}
                   </Button>
                 </form>
               </TabsContent>

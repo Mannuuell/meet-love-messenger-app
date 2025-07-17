@@ -4,7 +4,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Camera, MapPin, Heart, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Camera, MapPin, Heart, Eye, EyeOff, Loader2 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 interface ProfileSetupScreenProps {
   onBack: () => void;
@@ -14,6 +16,7 @@ interface ProfileSetupScreenProps {
 export const ProfileSetupScreen = ({ onBack, onComplete }: ProfileSetupScreenProps) => {
   const [step, setStep] = useState(1);
   const [discreteMode, setDiscreteMode] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     age: '',
@@ -23,6 +26,9 @@ export const ProfileSetupScreen = ({ onBack, onComplete }: ProfileSetupScreenPro
     genderPreference: '',
     ageRange: [18, 35]
   });
+
+  const { saveProfile } = useAuth();
+  const { toast } = useToast();
 
   const interests = [
     'Viajar', 'Música', 'Livros', 'Culinária', 'Fitness', 'Cinema', 
@@ -38,11 +44,104 @@ export const ProfileSetupScreen = ({ onBack, onComplete }: ProfileSetupScreenPro
     }));
   };
 
-  const handleNext = () => {
+  const validateStep = () => {
+    if (step === 1) {
+      if (!formData.name.trim()) {
+        toast({
+          title: "Erro",
+          description: "Nome é obrigatório",
+          variant: "destructive"
+        });
+        return false;
+      }
+      if (!formData.age || parseInt(formData.age) < 18 || parseInt(formData.age) > 80) {
+        toast({
+          title: "Erro",
+          description: "Idade deve estar entre 18 e 80 anos",
+          variant: "destructive"
+        });
+        return false;
+      }
+      if (!formData.location.trim()) {
+        toast({
+          title: "Erro",
+          description: "Localização é obrigatória",
+          variant: "destructive"
+        });
+        return false;
+      }
+      if (!formData.bio.trim() || formData.bio.length < 20) {
+        toast({
+          title: "Erro",
+          description: "Bio deve ter pelo menos 20 caracteres",
+          variant: "destructive"
+        });
+        return false;
+      }
+    } else if (step === 2) {
+      if (formData.interests.length < 3) {
+        toast({
+          title: "Erro",
+          description: "Selecione pelo menos 3 interesses",
+          variant: "destructive"
+        });
+        return false;
+      }
+    } else if (step === 3) {
+      if (!formData.genderPreference) {
+        toast({
+          title: "Erro",
+          description: "Selecione uma preferência de gênero",
+          variant: "destructive"
+        });
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const handleNext = async () => {
+    if (!validateStep()) return;
+
     if (step < 3) {
       setStep(step + 1);
     } else {
-      onComplete();
+      setIsLoading(true);
+      try {
+        const success = saveProfile({
+          name: formData.name,
+          age: parseInt(formData.age),
+          location: formData.location,
+          bio: formData.bio,
+          interests: formData.interests,
+          genderPreference: formData.genderPreference,
+          ageRange: formData.ageRange as [number, number],
+          discreteMode,
+          photos: []
+        });
+
+        if (success) {
+          toast({
+            title: "Sucesso!",
+            description: "Perfil criado com sucesso"
+          });
+          onComplete();
+        } else {
+          toast({
+            title: "Erro",
+            description: "Erro ao salvar perfil. Tente novamente.",
+            variant: "destructive"
+          });
+        }
+      } catch (error) {
+        toast({
+          title: "Erro",
+          description: "Algo deu errado. Tente novamente.",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -136,8 +235,15 @@ export const ProfileSetupScreen = ({ onBack, onComplete }: ProfileSetupScreenPro
                   />
                 </div>
 
-                <Button onClick={handleNext} variant="romantic" className="w-full">
-                  Próximo
+                <Button onClick={handleNext} variant="romantic" className="w-full" disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    "Próximo"
+                  )}
                 </Button>
               </CardContent>
             </>
@@ -175,8 +281,15 @@ export const ProfileSetupScreen = ({ onBack, onComplete }: ProfileSetupScreenPro
                   {formData.interests.length} selecionados
                 </div>
 
-                <Button onClick={handleNext} variant="romantic" className="w-full">
-                  Próximo
+                <Button onClick={handleNext} variant="romantic" className="w-full" disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    "Próximo"
+                  )}
                 </Button>
               </CardContent>
             </>
@@ -258,9 +371,18 @@ export const ProfileSetupScreen = ({ onBack, onComplete }: ProfileSetupScreenPro
                   </Button>
                 </div>
 
-                <Button onClick={handleNext} variant="romantic" className="w-full">
-                  <Heart className="w-4 h-4 mr-2" />
-                  Completar Perfil
+                <Button onClick={handleNext} variant="romantic" className="w-full" disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Criando perfil...
+                    </>
+                  ) : (
+                    <>
+                      <Heart className="w-4 h-4 mr-2" />
+                      Completar Perfil
+                    </>
+                  )}
                 </Button>
               </CardContent>
             </>

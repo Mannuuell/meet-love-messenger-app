@@ -4,51 +4,66 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Heart, Plus, Bell, MapPin, Star, Users, Coffee } from "lucide-react";
+import { useAppData } from "@/hooks/useAppData";
+import { useToast } from "@/hooks/use-toast";
 
 interface HomeScreenProps {
   onNavigate: (screen: string) => void;
+  appData: ReturnType<typeof useAppData>;
 }
 
-export const HomeScreen = ({ onNavigate }: HomeScreenProps) => {
-  const [suggestions] = useState([
-    {
-      id: 1,
-      name: "Ana Silva",
-      age: 28,
-      location: "São Paulo, SP",
-      bio: "Apaixonada por viagens e café. Adoro descobrir novos lugares e culturas.",
-      interests: ["Viajar", "Café", "Fotografia"],
-      compatibility: "Alta afinidade",
-      distance: "2 km"
-    },
-    {
-      id: 2,
-      name: "Carlos Oliveira",
-      age: 32,
-      location: "Rio de Janeiro, RJ",
-      bio: "Músico e chef nas horas vagas. Sempre em busca de novas experiências.",
-      interests: ["Música", "Culinária", "Arte"],
-      compatibility: "Boa afinidade",
-      distance: "5 km"
-    },
-    {
-      id: 3,
-      name: "Maria Santos",
-      age: 26,
-      location: "Belo Horizonte, MG",
-      bio: "Desenvolvedora, yoga e natureza. Acredito em conexões autênticas.",
-      interests: ["Tecnologia", "Yoga", "Natureza"],
-      compatibility: "Muito compatível",
-      distance: "1 km"
-    }
-  ]);
+export const HomeScreen = ({ onNavigate, appData }: HomeScreenProps) => {
+  const { toast } = useToast();
+  const { suggestions, addToFavorites, followUser, isUserFavorited, isUserFollowed } = appData;
 
-  const handleAddFavorite = (personId: number) => {
-    console.log(`Added ${personId} to favorites`);
+  const handleAddFavorite = (personId: string) => {
+    if (isUserFavorited(personId)) {
+      toast({
+        title: "Já está nos favoritos",
+        description: "Esta pessoa já está na sua lista de favoritos",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const success = addToFavorites(personId);
+    if (success) {
+      toast({
+        title: "Adicionado aos favoritos!",
+        description: "Pessoa adicionada à sua lista de favoritos"
+      });
+    } else {
+      toast({
+        title: "Erro",
+        description: "Não foi possível adicionar aos favoritos",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleFollow = (personId: number) => {
-    console.log(`Following ${personId}`);
+  const handleFollow = (personId: string) => {
+    if (isUserFollowed(personId)) {
+      toast({
+        title: "Já está seguindo",
+        description: "Você já está seguindo esta pessoa",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const success = followUser(personId);
+    if (success) {
+      toast({
+        title: "Agora você está seguindo!",
+        description: "Você receberá notificações sobre esta pessoa"
+      });
+    } else {
+      toast({
+        title: "Erro",
+        description: "Não foi possível seguir esta pessoa",
+        variant: "destructive"
+      });
+    }
   };
 
   const getCompatibilityColor = (compatibility: string) => {
@@ -174,22 +189,24 @@ export const HomeScreen = ({ onNavigate }: HomeScreenProps) => {
 
                     <div className="flex gap-2">
                       <Button
-                        variant="outline"
+                        variant={isUserFavorited(person.id) ? "default" : "outline"}
                         size="sm"
                         onClick={() => handleAddFavorite(person.id)}
                         className="flex-1"
+                        disabled={isUserFavorited(person.id)}
                       >
                         <Plus className="w-4 h-4 mr-1" />
-                        Favoritar
+                        {isUserFavorited(person.id) ? "Favoritado" : "Favoritar"}
                       </Button>
                       <Button
-                        variant="default"
+                        variant={isUserFollowed(person.id) ? "default" : "outline"}
                         size="sm"
                         onClick={() => handleFollow(person.id)}
                         className="flex-1"
+                        disabled={isUserFollowed(person.id)}
                       >
                         <Bell className="w-4 h-4 mr-1" />
-                        Seguir
+                        {isUserFollowed(person.id) ? "Seguindo" : "Seguir"}
                       </Button>
                     </div>
                   </div>

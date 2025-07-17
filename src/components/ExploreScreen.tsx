@@ -9,6 +9,7 @@ import { Search, Filter, MapPin, Zap, Users, Coffee } from "lucide-react";
 
 interface ExploreScreenProps {
   onNavigate: (screen: string) => void;
+  appData: any;
 }
 
 export const ExploreScreen = ({ onNavigate }: ExploreScreenProps) => {

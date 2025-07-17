@@ -8,6 +8,8 @@ import { Search, Plus, Phone, Video, MoreVertical, Send, Smile, Paperclip } from
 
 interface ChatScreenProps {
   onNavigate: (screen: string) => void;
+  appData: any;
+  user: any;
 }
 
 export const ChatScreen = ({ onNavigate }: ChatScreenProps) => {

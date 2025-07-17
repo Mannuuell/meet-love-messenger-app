@@ -6,6 +6,7 @@ import { Heart, MessageCircle, X, UserPlus } from "lucide-react";
 
 interface FavoritesScreenProps {
   onNavigate: (screen: string) => void;
+  appData: any;
 }
 
 export const FavoritesScreen = ({ onNavigate }: FavoritesScreenProps) => {
