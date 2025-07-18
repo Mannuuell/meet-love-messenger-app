@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { WelcomeScreen } from "./WelcomeScreen";
 import { AuthScreen } from "./AuthScreen";
 import { ProfileSetupScreen } from "./ProfileSetupScreen";
@@ -8,8 +9,7 @@ import { FavoritesScreen } from "./FavoritesScreen";
 import { ChatScreen } from "./ChatScreen";
 import { ProfileScreen } from "./ProfileScreen";
 import { BottomNavigation } from "./BottomNavigation";
-import { useAuth } from "@/hooks/useAuth";
-import { useAppData } from "@/hooks/useAppData";
+import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
 
 type AppScreen = 
   | 'welcome'
@@ -23,21 +23,40 @@ type AppScreen =
 
 export const MeetLoveApp = () => {
   const [currentScreen, setCurrentScreen] = useState<AppScreen>('welcome');
-  const { user, isAuthenticated, isProfileComplete, isLoading } = useAuth();
-  const appData = useAppData(user?.id);
+  const { user, isAuthenticated, isLoading } = useSupabaseAuth();
+  const [hasProfile, setHasProfile] = useState(false);
+
+  // Check if user has profile
+  useEffect(() => {
+    const checkProfile = async () => {
+      if (user) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+        
+        setHasProfile(!!data);
+      }
+    };
+
+    if (user) {
+      checkProfile();
+    }
+  }, [user]);
 
   // Set initial screen based on auth state
   useEffect(() => {
     if (!isLoading) {
-      if (isAuthenticated && isProfileComplete) {
+      if (isAuthenticated && hasProfile) {
         setCurrentScreen('home');
-      } else if (isAuthenticated && !isProfileComplete) {
+      } else if (isAuthenticated && !hasProfile) {
         setCurrentScreen('profile-setup');
       } else {
         setCurrentScreen('welcome');
       }
     }
-  }, [isAuthenticated, isProfileComplete, isLoading]);
+  }, [isAuthenticated, hasProfile, isLoading]);
 
   const handleGetStarted = () => {
     setCurrentScreen('auth');
@@ -54,7 +73,7 @@ export const MeetLoveApp = () => {
   };
 
   const handleNavigation = (screen: string) => {
-    if (isAuthenticated && isProfileComplete) {
+    if (isAuthenticated && hasProfile) {
       setCurrentScreen(screen as AppScreen);
     }
   };
@@ -67,8 +86,8 @@ export const MeetLoveApp = () => {
     }
   };
 
-  // Show main app screens with navigation
-  const showBottomNav = isAuthenticated && isProfileComplete && !['welcome', 'auth', 'profile-setup'].includes(currentScreen);
+  // Show main app screens with navigation  
+  const showBottomNav = isAuthenticated && hasProfile && !['welcome', 'auth', 'profile-setup'].includes(currentScreen);
 
   if (isLoading) {
     return (
@@ -97,19 +116,19 @@ export const MeetLoveApp = () => {
       )}
       
       {currentScreen === 'home' && (
-        <HomeScreen onNavigate={handleNavigation} appData={appData} />
+        <HomeScreen onNavigate={handleNavigation} />
       )}
       
       {currentScreen === 'explore' && (
-        <ExploreScreen onNavigate={handleNavigation} appData={appData} />
+        <ExploreScreen onNavigate={handleNavigation} />
       )}
       
       {currentScreen === 'favorites' && (
-        <FavoritesScreen onNavigate={handleNavigation} appData={appData} />
+        <FavoritesScreen onNavigate={handleNavigation} />
       )}
       
       {currentScreen === 'chat' && (
-        <ChatScreen onNavigate={handleNavigation} appData={appData} user={user} />
+        <ChatScreen onNavigate={handleNavigation} />
       )}
       
       {currentScreen === 'profile' && (

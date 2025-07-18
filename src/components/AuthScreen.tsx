@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Phone, Mail, ArrowLeft, Loader2 } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 interface AuthScreenProps {
@@ -24,7 +24,6 @@ export const AuthScreen = ({ onBack, onAuth }: AuthScreenProps) => {
     name: ''
   });
 
-  const { login, register } = useAuth();
   const { toast } = useToast();
 
   const validateForm = () => {
@@ -84,37 +83,50 @@ export const AuthScreen = ({ onBack, onAuth }: AuthScreenProps) => {
     setIsLoading(true);
 
     try {
-      let success = false;
-
       if (isLogin) {
-        success = await login(formData.email, formData.password);
-        if (success) {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: formData.password,
+        });
+
+        if (error) {
+          toast({
+            title: "Erro",
+            description: error.message,
+            variant: "destructive"
+          });
+        } else {
           toast({
             title: "Sucesso!",
             description: "Login realizado com sucesso"
           });
           onAuth();
-        } else {
-          toast({
-            title: "Erro",
-            description: "Email ou senha incorretos",
-            variant: "destructive"
-          });
         }
       } else {
-        success = await register(formData.name, formData.email, formData.password, formData.phone);
-        if (success) {
-          toast({
-            title: "Sucesso!",
-            description: "Conta criada com sucesso"
-          });
-          onAuth();
-        } else {
+        const { error } = await supabase.auth.signUp({
+          email: formData.email,
+          password: formData.password,
+          options: {
+            data: {
+              full_name: formData.name,
+              phone: formData.phone
+            },
+            emailRedirectTo: `${window.location.origin}/`
+          }
+        });
+
+        if (error) {
           toast({
             title: "Erro",
-            description: "Este email já está em uso",
+            description: error.message,
             variant: "destructive"
           });
+        } else {
+          toast({
+            title: "Sucesso!",
+            description: "Verifique seu email para confirmar a conta"
+          });
+          onAuth();
         }
       }
     } catch (error) {
@@ -210,7 +222,7 @@ export const AuthScreen = ({ onBack, onAuth }: AuthScreenProps) => {
                     required
                   />
 
-                  <Button type="submit" variant="romantic" className="w-full" disabled={isLoading}>
+                  <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -263,7 +275,7 @@ export const AuthScreen = ({ onBack, onAuth }: AuthScreenProps) => {
                     required
                   />
 
-                  <Button type="submit" variant="romantic" className="w-full" disabled={isLoading}>
+                  <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
